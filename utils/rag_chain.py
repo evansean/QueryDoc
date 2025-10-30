@@ -21,8 +21,8 @@ def create_memory(llm):
         return_messages=False
     )
 
-def summarize_video(docs, llm):
-    """Summarize the content of a video using RAG."""
+def summarize_docs(docs, llm):
+    """Summarize the content of documents using RAG."""
     chain = load_summarize_chain(llm, chain_type="map_reduce", verbose=True)
 
     # Run the summarization
@@ -32,27 +32,30 @@ def summarize_video(docs, llm):
 def run_rag_query(vectordb, query, memory, llm):
     """Run a RAG query against the vector store."""
 
-    retriever = vectordb.as_retriever(search_type="mmr", search_kwargs={"k": 3})
+    retriever = vectordb.as_retriever(search_type="mmr", search_kwargs={"k": 5, "fetch_k": 20})
 
     docs = retriever.invoke(query)
 
-    context = "\n\n".join([doc.page_content for doc in docs])
+    # Format context with source info
+    context_parts = []
+    for doc in docs:
+        src = doc.metadata.get("source", "Unknown")
+        context_parts.append(f"[Source: {src}]\n{doc.page_content}")
+    context = "\n\n".join(context_parts)
 
     chat_prompt = ChatPromptTemplate.from_messages([
         SystemMessagePromptTemplate.from_template(
-            "You are a helpful and friendly video assistant. "
-            "Answer user questions based on the video transcript and past conversation. "
-            "If the transcript doesn't contain the answer, use your own knowledge. "
+            "You are a helpful and friendly assistant. "
+            "Answer user questions based on the documents and past conversation. "
+            "If the documents don't contain the answer, use your own knowledge. "
             "Keep responses natural and concise, as if talking to a human."
-            "Respond in appropriate paragraph lengths"
         ),
         HumanMessagePromptTemplate.from_template(
             "Previous conversation:\n{chat_history}\n\n"
-            "Video transcript excerpts:\n{context}\n\n"
+            "Document excerpts (with sources):\n{context}\n\n"
             "User question:\n{question}\n\n"
             "Answer naturally and directly. "
-            "Do not repeat 'based on the conversation summary and video context' in your answer. "
-            "Only refer to the video context if necessary."
+            "Cite sources when relevant."
         ),
     ])
 

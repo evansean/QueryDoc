@@ -2,7 +2,7 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import Chroma
 
-def chunk_documents(documents, chunk_size=1000, chunk_overlap=200):
+def chunk_documents(documents, chunk_size=500, chunk_overlap=100):
     """Chunk documents into smaller pieces."""
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=chunk_size,
@@ -13,6 +13,8 @@ def chunk_documents(documents, chunk_size=1000, chunk_overlap=200):
 
 def create_vectorstore(documents):
     """Create a Chroma vector store from documents."""
+    if not documents:
+        raise ValueError("No documents found. Please upload or enter valid files/URLs.")
     # Chunk documents
     chunked_docs = chunk_documents(documents)
 
@@ -23,6 +25,6 @@ def create_vectorstore(documents):
     vectordb = Chroma.from_documents(
         documents=chunked_docs,
         embedding=embeddings,
-        collection_name="youtube_videos",
+        collection_name="user_docs",
     )
     return vectordb
