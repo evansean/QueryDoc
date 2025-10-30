@@ -52,8 +52,8 @@ load_btn = st.sidebar.button("Load Documents")
 
 
 if load_btn and (uploaded_files or urls):
-    st.write("Uploaded files:", uploaded_files)
-    st.write("URLs:", urls)
+    # st.write("Uploaded files:", uploaded_files)
+    # st.write("URLs:", urls)
     with st.spinner("📥 Loading documents..."):
         docs = load_docs(uploaded_files, urls)
         # Group chunks by source
