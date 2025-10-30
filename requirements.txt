@@ -145,7 +145,7 @@ python-iso639==2025.2.18
 python-magic==0.4.27
 python-oxmsg==0.0.2
 pytz==2025.2
-pywin32==306
+pywin32==306; platform_system == "Windows"
 PyYAML==6.0.3
 pyzmq==25.1.1
 RapidFuzz==3.14.1
