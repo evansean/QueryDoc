@@ -21,20 +21,52 @@ def create_memory(llm):
         return_messages=False
     )
 
+# def summarize_docs(docs, llm):
+#     """Summarize the content of documents using RAG."""
+#     chain = load_summarize_chain(llm, chain_type="map_reduce", verbose=True)
+
+#     # Run the summarization
+#     summary = chain.invoke(docs)
+#     return summary['output_text']
+
 def summarize_docs(docs, llm):
-    """Summarize the content of documents using RAG."""
+    """
+    Summarize each document individually using RAG.
+    Returns a dictionary of summaries keyed by document source.
+    """
+
+    summaries = {}
+
+    # Create the summarization chain once
     chain = load_summarize_chain(llm, chain_type="map_reduce", verbose=True)
 
-    # Run the summarization
-    summary = chain.invoke(docs)
-    return summary['output_text']
+    for doc in docs:
+        # Determine source for display
+        src = doc.metadata.get("source", "Unknown Document")
 
-def run_rag_query(vectordb, query, memory, llm):
+        try:
+            # Run summarization on this document
+            summary_result = chain.invoke([doc])
+            summaries[src] = summary_result['output_text']
+        except Exception as e:
+            print(f"Error summarizing {src}: {e}")
+            summaries[src] = "Error generating summary."
+
+    return summaries
+
+def run_rag_query(vectordb, query, memory, llm, sources=None):
     """Run a RAG query against the vector store."""
 
     retriever = vectordb.as_retriever(search_type="mmr", search_kwargs={"k": 5, "fetch_k": 20})
 
-    docs = retriever.invoke(query)
+    # Apply metadata filter if sources are provided
+    if sources:
+        retriever_kwargs = {"filter": {"source": {"$in": sources}}}
+    else:
+        retriever_kwargs = {}
+
+    # Retrieve relevant chunks
+    docs = retriever.invoke(query, **retriever_kwargs)
 
     # Format context with source info
     context_parts = []

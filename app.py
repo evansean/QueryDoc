@@ -68,10 +68,7 @@ if load_btn and (uploaded_files or urls):
 
     with st.spinner("🧠 Summarizing documents..."):
         # summary = summarize_docs(docs, st.session_state.llm)
-        # Summarize each document
-        summaries = {}
-        for source, doc_chunks in docs_by_file.items():
-            summaries[source] = summarize_docs(doc_chunks, st.session_state.llm)
+        summaries = summarize_docs(docs, st.session_state.llm)
 
     st.session_state.vectordb = vectordb
     st.session_state.summary = summaries
@@ -93,6 +90,9 @@ if st.session_state.vectordb:
         st.write(st.session_state.summary[selected_file])
 
     with col2:
+        all_sources = list(st.session_state.summary.keys())  # from your summarize_docs function
+        selected_sources = st.multiselect("Select sources to include in chat", options=all_sources, default=all_sources)
+
         chat_container = st.container(height=500)
         with chat_container:
             for i, turn in enumerate(st.session_state.chat_history):
@@ -107,7 +107,8 @@ if st.session_state.vectordb:
                         st.session_state.vectordb,
                         query,
                         st.session_state.memory,
-                        st.session_state.llm
+                        st.session_state.llm,
+                        sources=selected_sources
                     )
                 st.session_state.chat_history.append({"user": query, "assistant": response})
                 st.session_state.user_query = ""
