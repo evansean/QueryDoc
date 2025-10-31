@@ -8,6 +8,7 @@ from langchain_huggingface import HuggingFaceEndpoint, ChatHuggingFace
 from dotenv import load_dotenv
 import streamlit as st
 from huggingface_hub import login
+from sentence_transformers import CrossEncoder
 
 load_dotenv()
 login(token=st.secrets["HUGGINGFACEHUB_API_TOKEN"])
@@ -21,6 +22,7 @@ def create_memory(llm):
         return_messages=False
     )
 
+# for amalgamated summarization
 # def summarize_docs(docs, llm):
 #     """Summarize the content of documents using RAG."""
 #     chain = load_summarize_chain(llm, chain_type="map_reduce", verbose=True)
@@ -54,10 +56,10 @@ def summarize_docs(docs, llm):
 
     return summaries
 
-def run_rag_query(vectordb, query, memory, llm, sources=None):
+def run_rag_query(vectordb, query, memory, llm, top_k, fetch_k, sources=None, rerank_top_k=5):
     """Run a RAG query against the vector store."""
 
-    retriever = vectordb.as_retriever(search_type="mmr", search_kwargs={"k": 5, "fetch_k": 20})
+    retriever = vectordb.as_retriever(search_type="mmr", search_kwargs={"k": top_k, "fetch_k": fetch_k})
 
     # Apply metadata filter if sources are provided
     if sources:
@@ -65,15 +67,25 @@ def run_rag_query(vectordb, query, memory, llm, sources=None):
     else:
         retriever_kwargs = {}
 
-    # Retrieve relevant chunks
+    # ---- Stage 1 of Retrieval: Vector Retrieval (MMR) ----
     docs = retriever.invoke(query, **retriever_kwargs)
+    print(f"Retrieved {len(docs)} documents to rerank.")
 
-    # Format context with source info
+
+
+    # ---- Stage 2 of Retrieval: Cross-Encoder Reranking ----
+    cross_encoder = CrossEncoder('cross-encoder/ms-marco-MiniLM-L-6-v2')
+    reranked_results = cross_encoder.rank(query=query, documents=[doc.page_content for doc in docs], top_k=rerank_top_k)
+    reranked_docs = [docs[item["corpus_id"]] for item in reranked_results]
+
+
+    # Prepare context from reranked documents and their sources
     context_parts = []
-    for doc in docs:
+    for doc in reranked_docs:
         src = doc.metadata.get("source", "Unknown")
         context_parts.append(f"[Source: {src}]\n{doc.page_content}")
     context = "\n\n".join(context_parts)
+
 
     chat_prompt = ChatPromptTemplate.from_messages([
         SystemMessagePromptTemplate.from_template(

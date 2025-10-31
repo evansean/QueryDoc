@@ -20,6 +20,10 @@ st.set_page_config(page_title="📄 QueryDoc — Chat with Your Documents", layo
 # --- SESSION STATE ---
 if "vectordb" not in st.session_state:
     st.session_state.vectordb = None
+if "top_k" not in st.session_state:
+    st.session_state.top_k = None
+if "fetch_k" not in st.session_state:
+    st.session_state.fetch_k = None
 if "summary" not in st.session_state:
     st.session_state.summary = ""
 if "chat_history" not in st.session_state:
@@ -37,6 +41,10 @@ if "memory" not in st.session_state:
 
 # --- SIDEBAR ---
 st.sidebar.header("📂 Upload Documents or Add URLs")
+
+st.sidebar.markdown("1️⃣ Upload one or more files (PDF, DOCX, TXT, CSV)")
+st.sidebar.markdown("2️⃣ Or enter one or more URLs (one per line)")
+st.sidebar.markdown("3️⃣ Press the **Load Documents** button below to process your inputs")
 
 uploaded_files = st.sidebar.file_uploader(
     "Upload one or more files",
@@ -65,12 +73,16 @@ if load_btn and (uploaded_files or urls):
 
     with st.spinner("🔍 Creating vector store..."):
         vectordb = create_vectorstore(docs)
+        num_docs = vectordb._collection.count()
+        top_k = 10
+        fetch_k = min(max(top_k * 2, int(0.01 * num_docs)), 200)
 
     with st.spinner("🧠 Summarizing documents..."):
-        # summary = summarize_docs(docs, st.session_state.llm)
         summaries = summarize_docs(docs, st.session_state.llm)
 
     st.session_state.vectordb = vectordb
+    st.session_state.top_k = top_k
+    st.session_state.fetch_k = fetch_k
     st.session_state.summary = summaries
     st.session_state.chat_history = []
     st.session_state.memory.clear()
@@ -80,7 +92,7 @@ if load_btn and (uploaded_files or urls):
 st.title("📄 QueryDoc — Chat with Your Documents")
 
 if st.session_state.vectordb:
-    col1, col2 = st.columns([2, 2])
+    col1, col2 = st.columns([1, 2])
 
     with col1:
         st.markdown("### 📝 Document Summaries")
@@ -93,7 +105,7 @@ if st.session_state.vectordb:
         all_sources = list(st.session_state.summary.keys())  # from your summarize_docs function
         selected_sources = st.multiselect("Select sources to include in chat", options=all_sources, default=all_sources)
 
-        chat_container = st.container(height=500)
+        chat_container = st.container(height=400)
         with chat_container:
             for i, turn in enumerate(st.session_state.chat_history):
                 message(turn["user"], is_user=True, key=f"user_{i}")
@@ -108,6 +120,8 @@ if st.session_state.vectordb:
                         query,
                         st.session_state.memory,
                         st.session_state.llm,
+                        st.session_state.top_k,
+                        st.session_state.fetch_k,
                         sources=selected_sources
                     )
                 st.session_state.chat_history.append({"user": query, "assistant": response})

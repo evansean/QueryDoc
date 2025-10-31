@@ -1,6 +1,6 @@
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_community.vectorstores import Chroma
+from langchain_community.vectorstores import Chroma, FAISS
 
 def chunk_documents(documents, chunk_size=500, chunk_overlap=100):
     """Chunk documents into smaller pieces."""
@@ -15,6 +15,7 @@ def create_vectorstore(documents):
     """Create a Chroma vector store from documents."""
     if not documents:
         raise ValueError("No documents found. Please upload or enter valid files/URLs.")
+    
     # Chunk documents
     chunked_docs = chunk_documents(documents)
 
@@ -27,4 +28,5 @@ def create_vectorstore(documents):
         embedding=embeddings,
         collection_name="user_docs",
     )
+    
     return vectordb

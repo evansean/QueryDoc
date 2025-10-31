@@ -1,6 +1,7 @@
 [theme]
-primaryColor = "#2f9cd3ff"             # Darker red for buttons, highlights
-backgroundColor = "#5acffaff"          # Very light red / pink for main background
-secondaryBackgroundColor = "#d8ecfbff" # White for panels like sidebar, chat container
-textColor = "#212121"                 # Dark grey for main text (better readability than pure white)
+primaryColor = "#ff4f58"
+backgroundColor = "#ffedd9"
+secondaryBackgroundColor = "#ffd6c2"
+textColor = "#2a1a0f"
+
 font = "sans serif"
